@@ -5,47 +5,47 @@ import { useState } from "react";
 const PLACEHOLDER_HTML =
   "<body style='display:flex;align-items:center;justify-content:center;height:100vh;color:#888;font-family:sans-serif'>Your UI will appear here</body>";
 
-  const fixHtml = (raw: string) => {
-    let html = raw
-      .replace(/```html/gi, "")
-      .replace(/```/g, "")
-      .trim();
-  
-    // Nuclear option: remove ANY script tag referencing tailwind (broken or not)
-    html = html.replace(/<script[^>]*tailwind[^>]*>[\s\S]*?<\/script>/gi, "");
-    // Also remove orphaned src= lines the model leaves behind
-    html = html.replace(/^\s*src=["']https:\/\/cdn\.tailwindcss\.com["'][^>]*>\s*$/gm, "");
-  
-    // Now inject a guaranteed correct Tailwind script into <head>
-    html = html.replace(
-      /<\/head>/i,
-      `<script src="https://cdn.tailwindcss.com"></script>\n</head>`
-    );
-  
-    return html;
-  };
+const TAILWIND_SCRIPT = '<script src="https://cdn.tailwindcss.com"></script>';
+const IMG_REPLACEMENT =
+  '<div class="aspect-video w-full rounded-xl bg-gradient-to-br from-indigo-400 via-violet-400 to-fuchsia-400 ring-1 ring-slate-900/[0.06]"></div>';
 
-/** Normalize streamed model output (fences, split tags) before preview. */
+/**
+ * Normalize streamed model output before preview:
+ * - Strip code fences and any model-emitted Tailwind script (broken or not).
+ * - Replace external <img> tags with a styled gradient block.
+ * - Inject our own Tailwind <script> as early as possible so partial streams
+ *   render with styles applied (otherwise tiny svgs expand to fill the iframe).
+ */
 function sanitizeModelHtml(accumulated: string): string {
-  return accumulated
-    .replace(/```html/gi, "")
-    .replace(/```/g, "")
-    // Fix broken script tag — model splits it across lines
-    .replace(
-      /<script[\s\S]*?src=["']https:\/\/cdn\.tailwindcss\.com["'][\s\S]*?><\/script>/gi,
-      '<script src="https://cdn.tailwindcss.com"></script>',
-    )
-    // Fix broken meta viewport tag
+  let html = accumulated.replace(/```html/gi, "").replace(/```/g, "").trim();
+
+  html = html.replace(/<script[^>]*tailwind[^>]*>[\s\S]*?<\/script>/gi, "");
+  html = html.replace(
+    /^\s*src=["']https:\/\/cdn\.tailwindcss\.com["'][^>]*>\s*$/gm,
+    "",
+  );
+
+  html = html.replace(/<img\b[^>]*>/gi, IMG_REPLACEMENT);
+
+  html = html
     .replace(
       /<meta\s+name=["']viewport["']\s+content=["'][^"']*["']\s*\/?>/gi,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
     )
-    // Fix broken charset meta
     .replace(
       /<meta\s+charset=["'][^"']*["']\s*\/?>/gi,
       '<meta charset="UTF-8">',
-    )
-    .trim();
+    );
+
+  if (/<\/head>/i.test(html)) {
+    html = html.replace(/<\/head>/i, `${TAILWIND_SCRIPT}\n</head>`);
+  } else if (/<head[^>]*>/i.test(html)) {
+    html = html.replace(/<head[^>]*>/i, (m) => `${m}\n${TAILWIND_SCRIPT}`);
+  } else {
+    html = `${TAILWIND_SCRIPT}\n${html}`;
+  }
+
+  return html;
 }
 
 export default function Home() {
@@ -56,8 +56,7 @@ export default function Home() {
 
   async function generate() {
     setLoading(true);
-    const cleaned = fixHtml(prompt);
-    setHtml(cleaned);
+    setHtml("");
     setError(null);
 
     const res = await fetch("/api/generate", {
