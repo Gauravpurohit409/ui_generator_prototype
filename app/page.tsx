@@ -5,6 +5,29 @@ import { useState } from "react";
 const PLACEHOLDER_HTML =
   "<body style='display:flex;align-items:center;justify-content:center;height:100vh;color:#888;font-family:sans-serif'>Your UI will appear here</body>";
 
+/** Normalize streamed model output (fences, split tags) before preview. */
+function sanitizeModelHtml(accumulated: string): string {
+  return accumulated
+    .replace(/```html/gi, "")
+    .replace(/```/g, "")
+    // Fix broken script tag — model splits it across lines
+    .replace(
+      /<script[\s\S]*?src=["']https:\/\/cdn\.tailwindcss\.com["'][\s\S]*?><\/script>/gi,
+      '<script src="https://cdn.tailwindcss.com"></script>',
+    )
+    // Fix broken meta viewport tag
+    .replace(
+      /<meta\s+name=["']viewport["']\s+content=["'][^"']*["']\s*\/?>/gi,
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    )
+    // Fix broken charset meta
+    .replace(
+      /<meta\s+charset=["'][^"']*["']\s*\/?>/gi,
+      '<meta charset="UTF-8">',
+    )
+    .trim();
+}
+
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [html, setHtml] = useState("");
@@ -64,7 +87,7 @@ export default function Home() {
             }
             if (parsed.text) {
               accumulated += parsed.text;
-              setHtml(accumulated);
+              setHtml(sanitizeModelHtml(accumulated));
             }
           } catch {
             // ignore malformed SSE lines

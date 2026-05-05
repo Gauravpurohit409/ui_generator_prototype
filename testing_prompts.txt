@@ -1,0 +1,27 @@
+Try these 5 prompts from simple to complex:
+
+**Simple**
+```
+sign in page for a fintech app with email and password fields
+```
+
+**Medium**
+```
+dashboard for a SaaS analytics tool with sidebar navigation, 4 stat cards showing revenue, users, conversions and churn, and a recent activity table
+```
+
+**Complex**
+```
+e-commerce product listing page with a filter sidebar on the left, 6 product cards in a grid with image placeholder, price, rating stars and add to cart button, and a top navigation with search bar and cart icon
+```
+
+**Really push it**
+```
+crypto trading dashboard with dark theme, top navbar with portfolio value and user avatar, left sidebar with coin list, main area showing a price chart placeholder, order book table on the right, and a buy/sell form at the bottom
+```
+
+**Stress test**
+```
+hospital management system dashboard with sidebar showing patient, appointments, doctors, billing and reports sections, top bar with notifications and admin profile, main content showing today's stats, upcoming appointments table, and recent patient admissions list
+```
+
