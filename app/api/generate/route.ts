@@ -15,8 +15,8 @@ Rules:
 - Output ONLY the HTML — no explanation, no markdown, no triple backticks, no code fences`;
 
 
-export async function POST(req) {
-  const { prompt } = await req.json();
+export async function POST(req: Request) {
+  const { prompt } = (await req.json()) as { prompt?: string };
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -34,10 +34,23 @@ export async function POST(req) {
     }),
   });
 
+  if (!response.ok) {
+    const detail = await response.text();
+    return Response.json(
+      { error: detail || `Groq request failed (${response.status})` },
+      { status: response.status >= 500 ? 502 : response.status },
+    );
+  }
+
+  const upstream = response.body;
+  if (!upstream) {
+    return Response.json({ error: "No response body from Groq" }, { status: 502 });
+  }
+
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
-      const reader = response.body.getReader();
+      const reader = upstream.getReader();
       const decoder = new TextDecoder();
 
       while (true) {
