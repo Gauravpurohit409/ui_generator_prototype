@@ -5,6 +5,26 @@ import { useState } from "react";
 const PLACEHOLDER_HTML =
   "<body style='display:flex;align-items:center;justify-content:center;height:100vh;color:#888;font-family:sans-serif'>Your UI will appear here</body>";
 
+  const fixHtml = (raw: string) => {
+    let html = raw
+      .replace(/```html/gi, "")
+      .replace(/```/g, "")
+      .trim();
+  
+    // Nuclear option: remove ANY script tag referencing tailwind (broken or not)
+    html = html.replace(/<script[^>]*tailwind[^>]*>[\s\S]*?<\/script>/gi, "");
+    // Also remove orphaned src= lines the model leaves behind
+    html = html.replace(/^\s*src=["']https:\/\/cdn\.tailwindcss\.com["'][^>]*>\s*$/gm, "");
+  
+    // Now inject a guaranteed correct Tailwind script into <head>
+    html = html.replace(
+      /<\/head>/i,
+      `<script src="https://cdn.tailwindcss.com"></script>\n</head>`
+    );
+  
+    return html;
+  };
+
 /** Normalize streamed model output (fences, split tags) before preview. */
 function sanitizeModelHtml(accumulated: string): string {
   return accumulated
@@ -36,7 +56,8 @@ export default function Home() {
 
   async function generate() {
     setLoading(true);
-    setHtml("");
+    const cleaned = fixHtml(prompt);
+    setHtml(cleaned);
     setError(null);
 
     const res = await fetch("/api/generate", {
